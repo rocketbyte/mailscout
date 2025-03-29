@@ -3,8 +3,7 @@
     "id": "banreservas_transacciones",
     "name": "Transacciones Banreservas",
     "subject_patterns": [
-      "Recibo de la transacción",
-      "Recibo"
+      "Recibo de la transacción"
     ],
     "from_patterns": [
       "NotificacionesTuBancoApp@banreservas.com"
@@ -16,31 +15,104 @@
     "extraction_rules": [
       {
         "name": "tipo_transaccion",
-        "pattern": "Transacción:\\s+([^\\n]+)"
+        "pattern": "^(.+?)\\s*$",
+        "content_type": "table",
+        "table_label": "Transacción"
       },
       {
         "name": "origen",
-        "pattern": "Origen:\\s+([^\\n]+)"
+        "pattern": "^(.+?)\\s*$",
+        "content_type": "table",
+        "table_label": "Origen"
       },
       {
         "name": "destino",
-        "pattern": "Destino:\\s+([^\\n]+)"
+        "pattern": "^(.+?)\\s*$",
+        "content_type": "table",
+        "table_label": "Destino"
       },
       {
         "name": "monto",
-        "pattern": "Monto:\\s+DOP\\s+([\\d,.]+)"
+        "pattern": "(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "amount",
+        "content_type": "table",
+        "table_label": "Monto"
+      },
+      {
+        "name": "moneda",
+        "pattern": "(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "currency",
+        "content_type": "table",
+        "table_label": "Monto"
       },
       {
         "name": "impuestos",
-        "pattern": "Impuestos:\\s+DOP\\s+([\\d,.]+)"
+        "pattern": "(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "amount",
+        "content_type": "table",
+        "table_label": "Impuestos"
+      },
+      {
+        "name": "comision",
+        "pattern": "(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "amount",
+        "content_type": "table",
+        "table_label": "Comisión"
       },
       {
         "name": "fecha_hora",
-        "pattern": "Fecha/Hora:\\s+([^\\n]+)"
+        "pattern": "^(.+?)\\s*$",
+        "content_type": "table",
+        "table_label": "Fecha/Hora"
       },
       {
         "name": "numero_referencia",
-        "pattern": "Numero de referencia:\\s+([\\d]+)"
+        "pattern": "^(\\d+)\\s*$",
+        "content_type": "table",
+        "table_label": "Numero de referencia"
+      },
+      {
+        "name": "fallback_tipo_transaccion",
+        "pattern": "Transacción:\\s+([^\\n]+)",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_origen",
+        "pattern": "Origen:\\s+([^\\n]+)",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_destino",
+        "pattern": "Destino:\\s+([^\\n]+)",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_monto",
+        "pattern": "Monto:\\s+(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "amount",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_moneda",
+        "pattern": "Monto:\\s+(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "currency",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_impuestos",
+        "pattern": "Impuestos:\\s+(?P<currency>DOP|USD)\\s+(?P<amount>[\\d,.]+)",
+        "group_name": "amount",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_fecha_hora",
+        "pattern": "Fecha/Hora:\\s+([^\\n]+)",
+        "content_type": "both"
+      },
+      {
+        "name": "fallback_numero_referencia",
+        "pattern": "Numero de referencia:\\s+([\\d]+)",
+        "content_type": "both"
       }
     ]
   }

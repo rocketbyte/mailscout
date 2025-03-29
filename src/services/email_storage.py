@@ -7,6 +7,14 @@ from datetime import datetime
 from src.models.email_data import EmailData
 from src.config import EMAIL_STORAGE_PATH, PROCESSED_EMAILS_DIR
 
+
+# Custom JSON encoder to handle datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,10 +34,26 @@ class EmailStorage:
     def save_email(self, email_data: EmailData) -> bool:
         """Save email data to storage."""
         try:
+            # Apply filter adapters if applicable
+            if email_data.filter_id:
+                # Import inside function to avoid circular imports
+                from src.services.filter_service import FILTER_ADAPTERS
+                
+                if email_data.filter_id in FILTER_ADAPTERS:
+                    adapter = FILTER_ADAPTERS[email_data.filter_id]
+                    enhanced_data = adapter.process(email_data, email_data.extracted_data)
+                    email_data.extracted_data = enhanced_data
+            
             file_path = self._get_email_file_path(email_data.id)
             
+            # Handle both Pydantic v1 and v2
+            if hasattr(email_data, "model_dump"):
+                email_dict = email_data.model_dump()
+            else:
+                email_dict = email_data.dict()
+                
             with open(file_path, "w") as f:
-                json.dump(email_data.dict(), f, indent=2)
+                json.dump(email_dict, f, indent=2, cls=DateTimeEncoder)
             
             logger.info(f"Saved email {email_data.id} to {file_path}")
             return True

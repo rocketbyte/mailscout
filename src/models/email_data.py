@@ -1,7 +1,14 @@
 from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 from datetime import datetime
+from enum import Enum
 import uuid
+
+
+class TransactionType(str, Enum):
+    INCOMING = "incoming"
+    OUTGOING = "outgoing"
+    UNKNOWN = "unknown"
 
 
 class EmailContent(BaseModel):

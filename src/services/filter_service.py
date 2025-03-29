@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Protocol, Any, Type
 from datetime import datetime
 
 from src.models.email_filter import (
@@ -9,11 +9,106 @@ from src.models.email_filter import (
     EmailFilterCreate, 
     EmailFilterUpdate
 )
+from src.models.email_data import EmailData, TransactionType
 from src.config import EMAIL_STORAGE_PATH
 
 logger = logging.getLogger(__name__)
 
 FILTERS_FILE = os.path.join(EMAIL_STORAGE_PATH, "filters.json")
+
+
+class FilterAdapter(Protocol):
+    """Protocol for filter adapters that enhance email filter functionality."""
+    
+    def process(self, email: EmailData, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Process the email and update extracted data."""
+        pass
+
+
+class GenericTransactionAdapter:
+    """Generic adapter for transaction emails that adds transaction direction information."""
+    
+    def __init__(self, owner_identifiers: List[str] = None):
+        """
+        Initialize the adapter with owner identifiers.
+        
+        Args:
+            owner_identifiers: List of strings that identify the owner in transaction fields
+        """
+        self.owner_identifiers = [id.upper() for id in (owner_identifiers or [])]
+    
+    def process(self, email: EmailData, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Determines if a transaction is incoming or outgoing based on account information.
+        
+        Args:
+            email: The email data object
+            extracted_data: The data already extracted by filters
+            
+        Returns:
+            Updated extracted data dictionary with transaction_type field
+        """
+        # Clone the extracted data to avoid modifying the original
+        result = extracted_data.copy()
+        
+        # First, consolidate any fallback values
+        for field in ["tipo_transaccion", "origen", "destino", "monto", 
+                     "impuestos", "fecha_hora", "numero_referencia"]:
+            fallback_field = f"fallback_{field}"
+            if fallback_field in extracted_data and field not in extracted_data:
+                result[field] = extracted_data[fallback_field]
+            
+            # Remove fallback fields from the result
+            if fallback_field in result:
+                del result[fallback_field]
+        
+        # Check if we have the necessary fields to determine transaction type
+        if "origen" not in result or "monto" not in result:
+            return result
+            
+        # Get origin and destination fields
+        origen = result.get("origen", "").upper()
+        destino = result.get("destino", "").upper()
+        
+        # Default to unknown
+        transaction_type = TransactionType.UNKNOWN.value
+        
+        # Check if any owner identifier is in the origin
+        if any(owner_id in origen for owner_id in self.owner_identifiers):
+            transaction_type = TransactionType.OUTGOING.value
+        # Check if any owner identifier is in the destination
+        elif any(owner_id in destino for owner_id in self.owner_identifiers):
+            transaction_type = TransactionType.INCOMING.value
+            
+        result["transaction_type"] = transaction_type
+        return result
+
+
+class BanreservasTransactionAdapter(GenericTransactionAdapter):
+    """Adapter for Banreservas transaction emails that adds transaction direction information."""
+    
+    def __init__(self):
+        """Initialize with Banreservas-specific owner identifiers."""
+        super().__init__(owner_identifiers=["STARLIN", "GIL CRUZ"])
+
+
+# Registry of filter adapters by filter_id
+FILTER_ADAPTERS: Dict[str, FilterAdapter] = {
+    "banreservas_transacciones": BanreservasTransactionAdapter()
+}
+
+# Utility function to create a new adapter for any bank with custom identifiers
+def create_transaction_adapter(owner_identifiers: List[str]) -> GenericTransactionAdapter:
+    """
+    Creates a new generic transaction adapter with the given owner identifiers.
+    
+    Args:
+        owner_identifiers: List of strings that identify the owner in transaction fields
+        
+    Returns:
+        Configured GenericTransactionAdapter instance
+    """
+    return GenericTransactionAdapter(owner_identifiers=owner_identifiers)
 
 
 class FilterService:
@@ -49,7 +144,14 @@ class FilterService:
     def _save_filters(self):
         """Save filters to the JSON file."""
         try:
-            filters_data = [filter_obj.dict() for filter_obj in self.filters.values()]
+            # Handle both Pydantic v1 and v2
+            filters_data = []
+            for filter_obj in self.filters.values():
+                if hasattr(filter_obj, "model_dump"):
+                    filter_dict = filter_obj.model_dump()
+                else:
+                    filter_dict = filter_obj.dict()
+                filters_data.append(filter_dict)
             
             with open(FILTERS_FILE, "w") as f:
                 json.dump(filters_data, f, indent=2)

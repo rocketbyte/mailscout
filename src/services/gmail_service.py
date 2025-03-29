@@ -198,10 +198,15 @@ class GmailService:
                 continue
             
             # Check content patterns if any
-            if email_filter.content_patterns and email_data.content.plain_text:
+            if email_filter.content_patterns:
                 content_match = False
                 for pattern in email_filter.content_patterns:
-                    if pattern.lower() in email_data.content.plain_text.lower():
+                    # Check in plain text content
+                    if email_data.content.plain_text and pattern.lower() in email_data.content.plain_text.lower():
+                        content_match = True
+                        break
+                    # Check in HTML content
+                    if email_data.content.html and pattern.lower() in email_data.content.html.lower():
                         content_match = True
                         break
                 
@@ -212,7 +217,8 @@ class GmailService:
             extracted_data = {}
             for rule in email_filter.extraction_rules:
                 text_content = email_data.content.plain_text or ""
-                extracted = rule.extract_data(text_content)
+                html_content = email_data.content.html or ""
+                extracted = rule.extract_data(text_content, html_content)
                 if extracted:
                     extracted_data[rule.name] = extracted
             
