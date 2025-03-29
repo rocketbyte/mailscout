@@ -1,0 +1,47 @@
+[
+  {
+    "id": "banreservas_transacciones",
+    "name": "Transacciones Banreservas",
+    "subject_patterns": [
+      "Recibo de la transacción",
+      "Recibo"
+    ],
+    "from_patterns": [
+      "NotificacionesTuBancoApp@banreservas.com"
+    ],
+    "to_patterns": [],
+    "content_patterns": [
+      "Le notificamos que se realizó la siguiente transacción en TuB@nco Banreservas"
+    ],
+    "extraction_rules": [
+      {
+        "name": "tipo_transaccion",
+        "pattern": "Transacción:\\s+([^\\n]+)"
+      },
+      {
+        "name": "origen",
+        "pattern": "Origen:\\s+([^\\n]+)"
+      },
+      {
+        "name": "destino",
+        "pattern": "Destino:\\s+([^\\n]+)"
+      },
+      {
+        "name": "monto",
+        "pattern": "Monto:\\s+DOP\\s+([\\d,.]+)"
+      },
+      {
+        "name": "impuestos",
+        "pattern": "Impuestos:\\s+DOP\\s+([\\d,.]+)"
+      },
+      {
+        "name": "fecha_hora",
+        "pattern": "Fecha/Hora:\\s+([^\\n]+)"
+      },
+      {
+        "name": "numero_referencia",
+        "pattern": "Numero de referencia:\\s+([\\d]+)"
+      }
+    ]
+  }
+]

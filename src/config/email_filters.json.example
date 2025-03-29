@@ -1,0 +1,23 @@
+[
+  {
+    "id": "f6f7c5e5-eb8a-4bb4-93e4-50b36bc95b0d",
+    "name": "Order Confirmation",
+    "subject_patterns": ["Your order", "Order confirmation"],
+    "from_patterns": ["store@example.com"],
+    "to_patterns": [],
+    "content_patterns": ["Thank you for your order"],
+    "extraction_rules": [
+      {
+        "name": "order_number",
+        "pattern": "Order number:\\s*([A-Z0-9]+)"
+      },
+      {
+        "name": "total_amount",
+        "pattern": "Total:\\s*\\$([0-9.]+)"
+      }
+    ],
+    "is_active": true,
+    "created_at": "2025-03-20T10:00:00",
+    "updated_at": "2025-03-20T10:00:00"
+  }
+]
