@@ -6,7 +6,8 @@ from src.models.email_filter import EmailFilter, EmailFilterCreate, EmailFilterU
 from src.models.email_data import EmailData
 from src.services.gmail_service import GmailService
 from src.services.filter_service import FilterService
-from src.services.email_storage import EmailStorage
+from src.services.email_storage import EmailStorageInterface, EmailStorageFactory
+from src.config import get_storage_config
 from src.utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -35,9 +36,13 @@ def get_filter_service():
     service = FilterService()
     return service
 
-def get_email_storage():
-    service = EmailStorage()
-    return service
+def get_email_storage() -> EmailStorageInterface:
+    """Get the configured email storage implementation."""
+    storage_config = get_storage_config()
+    storage_type = storage_config["type"]
+    config = storage_config.get("config", {})
+    
+    return EmailStorageFactory.create_storage(storage_type, **config)
 
 
 @app.get("/")
@@ -109,7 +114,7 @@ async def process_filter(
     max_results: int = 100,
     gmail_service: GmailService = Depends(get_gmail_service),
     filter_service: FilterService = Depends(get_filter_service),
-    email_storage: EmailStorage = Depends(get_email_storage)
+    email_storage: EmailStorageInterface = Depends(get_email_storage)
 ):
     """Process a filter and fetch matching emails."""
     filter_obj = filter_service.get_filter(filter_id)
@@ -130,7 +135,7 @@ async def process_filter_background(
     filter_obj: EmailFilter,
     max_results: int,
     gmail_service: GmailService,
-    email_storage: EmailStorage
+    email_storage: EmailStorageInterface
 ):
     """Background task to process a filter."""
     try:
@@ -149,7 +154,7 @@ async def process_filter_background(
 async def get_emails_by_filter(
     filter_id: str,
     limit: int = 100,
-    email_storage: EmailStorage = Depends(get_email_storage),
+    email_storage: EmailStorageInterface = Depends(get_email_storage),
     filter_service: FilterService = Depends(get_filter_service)
 ):
     """Get emails processed by a specific filter."""
@@ -164,7 +169,7 @@ async def get_emails_by_filter(
 @app.get("/emails/{email_id}", response_model=EmailData)
 async def get_email(
     email_id: str,
-    email_storage: EmailStorage = Depends(get_email_storage)
+    email_storage: EmailStorageInterface = Depends(get_email_storage)
 ):
     """Get a specific email by ID."""
     email_data = email_storage.get_email(email_id)
@@ -176,7 +181,7 @@ async def get_email(
 @app.delete("/emails/{email_id}")
 async def delete_email(
     email_id: str,
-    email_storage: EmailStorage = Depends(get_email_storage)
+    email_storage: EmailStorageInterface = Depends(get_email_storage)
 ):
     """Delete an email by ID."""
     success = email_storage.delete_email(email_id)

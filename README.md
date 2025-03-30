@@ -9,6 +9,9 @@ A customizable service that reads Gmail emails, filters them based on patterns, 
 - Data extraction from email content using configurable patterns
 - REST API for configuration and data retrieval
 - Asynchronous processing for handling large volumes of emails
+- Modular storage system with support for:
+  - Local JSON file storage
+  - MongoDB database storage
 
 ## Setup
 
@@ -32,10 +35,40 @@ A customizable service that reads Gmail emails, filters them based on patterns, 
 
 5. Create `.env` file based on `.env.example` with your credentials
 
+## Storage Configuration
+
+MailScout supports multiple storage backends that can be configured using environment variables:
+
+### JSON File Storage (Default)
+
+No additional configuration required. Emails are stored as JSON files in the `data/emails/processed_emails/` directory.
+
+### MongoDB Storage
+
+To use MongoDB as the storage backend:
+
+1. Install the MongoDB dependency:
+   ```
+   pip install pymongo
+   ```
+
+2. Set the following environment variables in your `.env` file:
+   ```
+   MAILSCOUT_STORAGE_TYPE=mongodb
+   MONGODB_CONNECTION_STRING=mongodb://localhost:27017
+   MONGODB_DATABASE=mailscout
+   MONGODB_COLLECTION=emails
+   ```
+
 ## Running the Application
 
 ```
 uvicorn src.api.main:app --reload
+```
+
+For production deployment:
+```
+python run.py --host 0.0.0.0 --port 8000
 ```
 
 ## API Documentation
