@@ -6,7 +6,7 @@ import shutil
 from datetime import datetime
 
 from src.models.email_data import EmailData, EmailContent
-from src.services.email_storage import (
+from src.storage import (
     EmailStorageInterface,
     JsonEmailStorage,
     MongoDBEmailStorage,

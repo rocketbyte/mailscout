@@ -6,7 +6,7 @@ from src.models.email_filter import EmailFilter, EmailFilterCreate, EmailFilterU
 from src.models.email_data import EmailData
 from src.services.gmail_service import GmailService
 from src.services.filter_service import FilterService
-from src.services.email_storage import EmailStorageInterface, EmailStorageFactory
+from src.storage import EmailStorageInterface, EmailStorageFactory
 from src.config import get_storage_config
 from src.utils import setup_logging
 
