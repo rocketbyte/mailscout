@@ -1,9 +1,50 @@
 from typing import Dict, List, Optional, Union, Pattern, Literal
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, validator, HttpUrl
 import re
 import uuid
 from datetime import datetime
 from bs4 import BeautifulSoup
+from enum import Enum
+
+
+class WebhookEventType(str, Enum):
+    EMAIL_PROCESSED = "email_processed"
+    FILTER_UPDATED = "filter_updated"
+    ALL = "all"
+
+
+class WebhookConfig(BaseModel):
+    """Configuration for a webhook endpoint."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    url: HttpUrl
+    secret: Optional[str] = None
+    event_types: List[WebhookEventType] = Field(default=[WebhookEventType.ALL])
+    is_active: bool = True
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.now)
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+
+
+class WebhookConfigCreate(BaseModel):
+    """Schema for creating a webhook configuration."""
+    url: HttpUrl
+    secret: Optional[str] = None
+    event_types: List[WebhookEventType] = Field(default=[WebhookEventType.ALL])
+    is_active: bool = True
+    description: Optional[str] = None
+
+
+class WebhookConfigUpdate(BaseModel):
+    """Schema for updating a webhook configuration."""
+    url: Optional[HttpUrl] = None
+    secret: Optional[str] = None
+    event_types: Optional[List[WebhookEventType]] = None
+    is_active: Optional[bool] = None
+    description: Optional[str] = None
 
 
 class DataExtractionRule(BaseModel):
@@ -116,6 +157,7 @@ class EmailFilter(BaseModel):
     to_patterns: List[str] = Field(default_factory=list)
     content_patterns: List[str] = Field(default_factory=list)
     extraction_rules: List[DataExtractionRule] = Field(default_factory=list)
+    webhooks: List[WebhookConfig] = Field(default_factory=list)
     is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
@@ -133,6 +175,7 @@ class EmailFilterCreate(BaseModel):
     to_patterns: List[str] = Field(default_factory=list)
     content_patterns: List[str] = Field(default_factory=list)
     extraction_rules: List[DataExtractionRule] = Field(default_factory=list)
+    webhooks: List[WebhookConfigCreate] = Field(default_factory=list)
     is_active: bool = True
 
 
@@ -143,4 +186,5 @@ class EmailFilterUpdate(BaseModel):
     to_patterns: Optional[List[str]] = None
     content_patterns: Optional[List[str]] = None
     extraction_rules: Optional[List[DataExtractionRule]] = None
+    webhooks: Optional[List[WebhookConfigCreate]] = None
     is_active: Optional[bool] = None
