@@ -84,7 +84,8 @@ async def test_notify_success(webhook_service, webhook_config, email_data):
         # Check that correct URL was used
         args, kwargs = mock_post.call_args
         assert kwargs["content"]  # Payload should be included
-        assert "https://example.com/webhook" in str(kwargs)
+        # In the webhook service the URL is the first positional argument
+        assert args[0] == "https://example.com/webhook"
 
 
 @pytest.mark.asyncio

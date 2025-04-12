@@ -7,12 +7,22 @@ import hashlib
 import httpx
 import time
 import asyncio
+import datetime
 from typing import Dict, Any, List, Optional, Union
 
 from src.models.email_filter import WebhookConfig, WebhookEventType
 from src.models.email_data import EmailData
 
 logger = logging.getLogger(__name__)
+
+
+class DateTimeEncoder(json.JSONEncoder):
+    """Custom JSON encoder that handles datetime objects."""
+    
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class WebhookService:
@@ -76,10 +86,10 @@ class WebhookService:
         payload = {
             "event": event_type,
             "timestamp": int(time.time()),
-            "data": data.dict() if hasattr(data, "dict") else data,
+            "data": data.model_dump() if hasattr(data, "model_dump") else data,
         }
 
-        payload_json = json.dumps(payload)
+        payload_json = json.dumps(payload, cls=DateTimeEncoder)
         signature = self.generate_signature(payload_json, webhook.secret or "")
 
         headers = {
