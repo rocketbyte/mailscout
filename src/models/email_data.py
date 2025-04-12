@@ -33,8 +33,6 @@ class EmailData(BaseModel):
     extracted_data: Dict[str, Any] = Field(default_factory=dict)
     filter_id: Optional[str] = None
     processed_at: datetime = Field(default_factory=datetime.now)
-    
+
     class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+        json_encoders = {datetime: lambda v: v.isoformat()}

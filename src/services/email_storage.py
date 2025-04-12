@@ -11,7 +11,7 @@ from src.storage import (
     JsonEmailStorage,
     MongoDBEmailStorage,
     EmailStorageFactory,
-    EmailStorage as _EmailStorage
+    EmailStorage as _EmailStorage,
 )
 
 logger = logging.getLogger(__name__)
