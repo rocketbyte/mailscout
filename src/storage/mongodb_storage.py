@@ -36,9 +36,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
             import pymongo
             from pymongo import MongoClient
 
-            self.client = MongoClient(connection_string)
-            self.db = self.client[database_name]
-            self.collection = self.db[collection_name]
+            self.client: MongoClient = MongoClient(connection_string)
+            self.db: Any = self.client[database_name]
+            self.collection: Any = self.db[collection_name]
 
             # Create indexes for common queries
             self.collection.create_index("id", unique=True)

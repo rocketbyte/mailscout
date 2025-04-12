@@ -26,11 +26,11 @@ logger = logging.getLogger(__name__)
 
 
 class GmailService:
-    def __init__(self):
-        self.service = None
+    def __init__(self) -> None:
+        self.service: Optional[Any] = None
         self._ensure_storage_path()
 
-    def _ensure_storage_path(self):
+    def _ensure_storage_path(self) -> None:
         """Ensure the email storage directory exists."""
         os.makedirs(EMAIL_STORAGE_PATH, exist_ok=True)
 
@@ -63,6 +63,10 @@ class GmailService:
         """Search for emails using Gmail API query."""
         if not self.service:
             self.authenticate()
+            
+        if not self.service:  # If authentication failed
+            logger.error("Gmail service not initialized")
+            return []
 
         try:
             results = (
@@ -74,7 +78,8 @@ class GmailService:
 
             messages = results.get("messages", [])
             logger.info(f"Found {len(messages)} emails matching query: {query}")
-            return messages
+            # Explicitly cast the result to the expected return type
+            return [message for message in messages]
         except Exception as e:
             logger.error(f"Failed to search emails: {str(e)}")
             raise
@@ -84,6 +89,10 @@ class GmailService:
         if not self.service:
             self.authenticate()
 
+        if not self.service:  # If authentication failed
+            logger.error("Gmail service not initialized")
+            return None
+            
         try:
             message = (
                 self.service.users()
@@ -106,7 +115,7 @@ class GmailService:
         headers = {h["name"].lower(): h["value"] for h in message["payload"]["headers"]}
 
         # Get email content
-        body = {"plain_text": None, "html": None}
+        body: Dict[str, Optional[str]] = {"plain_text": None, "html": None}
         parts = [message["payload"]]
 
         while parts:
@@ -225,7 +234,7 @@ class GmailService:
                     continue
 
             # Extract data using rules
-            extracted_data = {}
+            extracted_data: Dict[str, str] = {}
             for rule in email_filter.extraction_rules:
                 text_content = email_data.content.plain_text or ""
                 html_content = email_data.content.html or ""

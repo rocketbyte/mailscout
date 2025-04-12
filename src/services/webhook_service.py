@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class DateTimeEncoder(json.JSONEncoder):
     """Custom JSON encoder that handles datetime objects."""
 
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, datetime.datetime):
             return obj.isoformat()
         return super().default(obj)
@@ -28,9 +28,9 @@ class DateTimeEncoder(json.JSONEncoder):
 class WebhookService:
     """Service for managing and sending webhook notifications."""
 
-    def __init__(self):
-        self._retry_delay = 5  # seconds
-        self._max_retries = 3
+    def __init__(self) -> None:
+        self._retry_delay: int = 5  # seconds
+        self._max_retries: int = 3
 
     def generate_signature(self, payload: str, secret: str) -> str:
         """

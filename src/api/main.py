@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Dict, List, Optional, Any
 import logging
 
 from src.models.email_filter import (
@@ -38,17 +39,17 @@ app.add_middleware(
 
 
 # Service dependencies
-def get_gmail_service():
+def get_gmail_service() -> GmailService:
     service = GmailService()
     return service
 
 
-def get_filter_service():
+def get_filter_service() -> FilterService:
     service = FilterService()
     return service
 
 
-def get_webhook_service():
+def get_webhook_service() -> WebhookService:
     service = WebhookService()
     return service
 
@@ -63,16 +64,16 @@ def get_email_storage() -> EmailStorageInterface:
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, str]:
     return {"message": "MailScout API is running"}
 
 
 # Filter endpoints
-@app.get("/filters", response_model=list[EmailFilter])
+@app.get("/filters", response_model=List[EmailFilter])
 async def get_filters(
     active_only: bool = False,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> List[EmailFilter]:
     """Get all email filters."""
     return filter_service.get_filters(active_only)
 
@@ -80,7 +81,7 @@ async def get_filters(
 @app.get("/filters/{filter_id}", response_model=EmailFilter)
 async def get_filter(
     filter_id: str, filter_service: FilterService = Depends(get_filter_service)
-):
+) -> EmailFilter:
     """Get a specific email filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -92,7 +93,7 @@ async def get_filter(
 async def create_filter(
     filter_data: EmailFilterCreate,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> EmailFilter:
     """Create a new email filter."""
     return filter_service.create_filter(filter_data)
 
@@ -102,7 +103,7 @@ async def update_filter(
     filter_id: str,
     filter_data: EmailFilterUpdate,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> EmailFilter:
     """Update an existing email filter."""
     filter_obj = filter_service.update_filter(filter_id, filter_data)
     if not filter_obj:
@@ -113,7 +114,7 @@ async def update_filter(
 @app.delete("/filters/{filter_id}")
 async def delete_filter(
     filter_id: str, filter_service: FilterService = Depends(get_filter_service)
-):
+) -> Dict[str, str]:
     """Delete an email filter."""
     success = filter_service.delete_filter(filter_id)
     if not success:
@@ -131,7 +132,7 @@ async def process_filter(
     filter_service: FilterService = Depends(get_filter_service),
     email_storage: EmailStorageInterface = Depends(get_email_storage),
     webhook_service: WebhookService = Depends(get_webhook_service),
-):
+) -> Dict[str, str]:
     """Process a filter and fetch matching emails."""
     filter_obj = filter_service.get_filter(filter_id)
 
@@ -160,7 +161,7 @@ async def process_filter_background(
     gmail_service: GmailService,
     email_storage: EmailStorageInterface,
     webhook_service: WebhookService = Depends(get_webhook_service),
-):
+) -> None:
     """Background task to process a filter."""
     try:
         emails = gmail_service.process_filter(filter_obj, max_results)
@@ -188,13 +189,13 @@ async def process_filter_background(
         logger.error(f"Error processing filter {filter_obj.id}: {str(e)}")
 
 
-@app.get("/emails/filter/{filter_id}", response_model=list[EmailData])
+@app.get("/emails/filter/{filter_id}", response_model=List[EmailData])
 async def get_emails_by_filter(
     filter_id: str,
     limit: int = 100,
     email_storage: EmailStorageInterface = Depends(get_email_storage),
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> List[EmailData]:
     """Get emails processed by a specific filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -207,7 +208,7 @@ async def get_emails_by_filter(
 @app.get("/emails/{email_id}", response_model=EmailData)
 async def get_email(
     email_id: str, email_storage: EmailStorageInterface = Depends(get_email_storage)
-):
+) -> EmailData:
     """Get a specific email by ID."""
     email_data = email_storage.get_email(email_id)
     if not email_data:
@@ -218,7 +219,7 @@ async def get_email(
 @app.delete("/emails/{email_id}")
 async def delete_email(
     email_id: str, email_storage: EmailStorageInterface = Depends(get_email_storage)
-):
+) -> Dict[str, str]:
     """Delete an email by ID."""
     success = email_storage.delete_email(email_id)
     if not success:
@@ -227,10 +228,10 @@ async def delete_email(
 
 
 # Webhook endpoints
-@app.get("/filters/{filter_id}/webhooks", response_model=list[WebhookConfig])
+@app.get("/filters/{filter_id}/webhooks", response_model=List[WebhookConfig])
 async def get_filter_webhooks(
     filter_id: str, filter_service: FilterService = Depends(get_filter_service)
-):
+) -> List[WebhookConfig]:
     """Get all webhooks for a filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -244,7 +245,7 @@ async def add_filter_webhook(
     filter_id: str,
     webhook_data: WebhookConfigCreate,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> WebhookConfig:
     """Add a webhook to a filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -264,7 +265,7 @@ async def add_filter_webhook(
 
     # Update filter
     updated_filter = filter_service.update_filter(
-        filter_id, EmailFilterUpdate(webhooks=[w for w in filter_obj.webhooks])
+        filter_id, EmailFilterUpdate(webhooks=[WebhookConfigCreate(**w.dict()) for w in filter_obj.webhooks])
     )
 
     if not updated_filter:
@@ -281,7 +282,7 @@ async def update_filter_webhook(
     webhook_id: str,
     webhook_data: WebhookConfigUpdate,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> WebhookConfig:
     """Update a webhook for a filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -314,7 +315,7 @@ async def update_filter_webhook(
     # Update filter with modified webhook
     filter_obj.webhooks[webhook_index] = webhook
     updated_filter = filter_service.update_filter(
-        filter_id, EmailFilterUpdate(webhooks=[w for w in filter_obj.webhooks])
+        filter_id, EmailFilterUpdate(webhooks=[WebhookConfigCreate(**w.dict()) for w in filter_obj.webhooks])
     )
 
     if not updated_filter:
@@ -328,7 +329,7 @@ async def delete_filter_webhook(
     filter_id: str,
     webhook_id: str,
     filter_service: FilterService = Depends(get_filter_service),
-):
+) -> Dict[str, str]:
     """Delete a webhook from a filter."""
     filter_obj = filter_service.get_filter(filter_id)
     if not filter_obj:
@@ -342,7 +343,7 @@ async def delete_filter_webhook(
 
     # Update filter with webhooks
     updated_filter = filter_service.update_filter(
-        filter_id, EmailFilterUpdate(webhooks=updated_webhooks)
+        filter_id, EmailFilterUpdate(webhooks=[WebhookConfigCreate(**w.dict()) for w in updated_webhooks])
     )
 
     if not updated_filter:
