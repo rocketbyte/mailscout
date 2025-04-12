@@ -36,7 +36,7 @@ jobs:
     - name: Run tests with pytest
       run: |
         cd $(git rev-parse --show-toplevel)
-        pytest --cov=src
+        PYTHONPATH=$PWD pytest --cov=src
     
     - name: Run type checking with mypy
       run: |
