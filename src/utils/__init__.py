@@ -3,7 +3,7 @@ import logging
 import os
 
 
-def setup_logging():
+def setup_logging() -> None:
     """Configure logging for the application."""
     log_dir = "./logs"
     os.makedirs(log_dir, exist_ok=True)

@@ -19,7 +19,7 @@ TOKEN_FILE = os.path.join(
 )
 
 
-def setup_auth():
+def setup_auth() -> str:
     """Setup Gmail API authentication and get a refresh token."""
     if not GMAIL_CLIENT_ID or not GMAIL_CLIENT_SECRET:
         print("Error: GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET must be set in .env file")
@@ -60,7 +60,9 @@ def setup_auth():
             token.write(creds.to_json())
 
     # Print the refresh token for the user to add to .env
-    refresh_token = creds.refresh_token
+    refresh_token: str = ""
+    if creds.refresh_token is not None:
+        refresh_token = creds.refresh_token
 
     print("\nAuthentication successful!")
     print("\nAdd the following to your .env file:")

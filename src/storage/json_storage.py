@@ -13,7 +13,7 @@ from src.storage.interface import EmailStorageInterface
 
 # Custom JSON encoder to handle datetime objects
 class DateTimeEncoder(json.JSONEncoder):
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, datetime):
             return obj.isoformat()
         return super().default(obj)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class JsonEmailStorage(EmailStorageInterface):
     """Implementation of email storage using JSON files."""
 
-    def __init__(self, storage_path=None):
+    def __init__(self, storage_path: Optional[str] = None) -> None:
         """Initialize JSON file storage.
 
         Args:
@@ -34,7 +34,7 @@ class JsonEmailStorage(EmailStorageInterface):
         self.storage_path = storage_path or PROCESSED_EMAILS_DIR
         self._ensure_storage_path()
 
-    def _ensure_storage_path(self):
+    def _ensure_storage_path(self) -> None:
         """Ensure the storage directory exists."""
         os.makedirs(self.storage_path, exist_ok=True)
 

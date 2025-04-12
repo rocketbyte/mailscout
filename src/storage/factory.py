@@ -8,10 +8,10 @@ from src.storage.interface import EmailStorageInterface
 class EmailStorageFactory:
     """Factory class to create storage implementations."""
 
-    _implementations = {}
+    _implementations: Dict[str, Type[EmailStorageInterface]] = {}
 
     @classmethod
-    def register(cls, storage_type: str, implementation: Type[EmailStorageInterface]):
+    def register(cls, storage_type: str, implementation: Type[EmailStorageInterface]) -> None:
         """Register a storage implementation.
 
         Args:
@@ -21,7 +21,7 @@ class EmailStorageFactory:
         cls._implementations[storage_type.lower()] = implementation
 
     @classmethod
-    def create_storage(cls, storage_type: str, **kwargs) -> EmailStorageInterface:
+    def create_storage(cls, storage_type: str, **kwargs: Any) -> EmailStorageInterface:
         """Create and return a storage implementation based on type.
 
         Args:

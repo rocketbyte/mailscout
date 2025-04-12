@@ -26,7 +26,7 @@ class FilterAdapter(Protocol):
 class GenericTransactionAdapter:
     """Generic adapter for transaction emails that adds transaction direction information."""
 
-    def __init__(self, owner_identifiers: List[str] = None):
+    def __init__(self, owner_identifiers: Optional[List[str]] = None):
         """
         Initialize the adapter with owner identifiers.
 
@@ -94,7 +94,7 @@ class GenericTransactionAdapter:
 class BanreservasTransactionAdapter(GenericTransactionAdapter):
     """Adapter for Banreservas transaction emails that adds transaction direction information."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize with Banreservas-specific owner identifiers."""
         super().__init__(owner_identifiers=["STARLIN", "GIL CRUZ"])
 
@@ -122,16 +122,16 @@ def create_transaction_adapter(
 
 
 class FilterService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.filters: Dict[str, EmailFilter] = {}
         self._ensure_storage_path()
         self._load_filters()
 
-    def _ensure_storage_path(self):
+    def _ensure_storage_path(self) -> None:
         """Ensure the storage directory exists."""
         os.makedirs(EMAIL_STORAGE_PATH, exist_ok=True)
 
-    def _load_filters(self):
+    def _load_filters(self) -> None:
         """Load filters from the JSON file."""
         if not os.path.exists(FILTERS_FILE):
             logger.info(
@@ -153,7 +153,7 @@ class FilterService:
             logger.error(f"Failed to load filters: {str(e)}")
             self.filters = {}
 
-    def _save_filters(self):
+    def _save_filters(self) -> None:
         """Save filters to the JSON file."""
         try:
             # Handle both Pydantic v1 and v2

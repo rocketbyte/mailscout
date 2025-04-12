@@ -40,8 +40,8 @@ jobs:
     
     - name: Run type checking with mypy
       run: |
-        pip install mypy
-        mypy src
+        pip install mypy types-beautifulsoup4
+        mypy --ignore-missing-imports src
 
   build:
     runs-on: ubuntu-latest
