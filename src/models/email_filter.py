@@ -103,7 +103,9 @@ class DataExtractionRule(BaseModel):
                             self.compile_pattern()  # Ensure pattern is compiled
                             match = self._compiled_pattern.search(value)
                             if match and match.groups():
-                                return match.group(1)  # Return first capture group as Optional[str]
+                                return match.group(
+                                    1
+                                )  # Return first capture group as Optional[str]
 
                         # If no pattern or no match with groups, return entire value
                         return value  # Return as Optional[str]

@@ -11,7 +11,9 @@ class EmailStorageFactory:
     _implementations: Dict[str, Type[EmailStorageInterface]] = {}
 
     @classmethod
-    def register(cls, storage_type: str, implementation: Type[EmailStorageInterface]) -> None:
+    def register(
+        cls, storage_type: str, implementation: Type[EmailStorageInterface]
+    ) -> None:
         """Register a storage implementation.
 
         Args:
