@@ -35,7 +35,8 @@ jobs:
     
     - name: Run tests with pytest
       run: |
-        pytest --cov=../../src
+        cd $(git rev-parse --show-toplevel)
+        pytest --cov=src
     
     - name: Run type checking with mypy
       run: |
