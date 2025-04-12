@@ -1,5 +1,7 @@
 # Email Scout Service
 
+[example workflow](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
+
 A customizable service that reads Gmail emails, filters them based on patterns, and extracts specific data from email content.
 
 ## Features
