@@ -43,7 +43,40 @@ MailScout supports multiple storage backends that can be configured using enviro
 
 ### JSON File Storage (Default)
 
-No additional configuration required. Emails are stored as JSON files in the `data/emails/processed_emails/` directory.
+No additional configuration required. By default, emails are stored as individual JSON files in the `data/emails/processed_emails/` directory.
+
+#### File Storage Options
+
+When saving emails, you can choose between individual files (chunked storage) or a single bulk file:
+
+- **Individual Files (default)**: Each email is stored as a separate JSON file with its ID as the filename
+- **Bulk Storage**: All emails are stored in a single JSON file (`emails_bulk.json`) as an array of email objects
+
+To control this behavior:
+
+1. Using the API:
+   ```
+   # Save as individual files (default)
+   POST /process/{filter_id}?use_chunks=true
+   
+   # Save to a single bulk file
+   POST /process/{filter_id}?use_chunks=false
+   ```
+
+2. Using environment variables:
+   ```
+   # Configure the default storage mode (default is "true")
+   MAILSCOUT_USE_CHUNKS=false
+   ```
+
+3. Using the storage API directly:
+   ```python
+   # Save as individual file (default)
+   storage.save_email(email_data, use_chunks=True)
+   
+   # Save to bulk file
+   storage.save_email(email_data, use_chunks=False)
+   ```
 
 ### MongoDB Storage
 
@@ -60,6 +93,44 @@ To use MongoDB as the storage backend:
    MONGODB_CONNECTION_STRING=mongodb://localhost:27017
    MONGODB_DATABASE=mailscout
    MONGODB_COLLECTION=emails
+   ```
+
+#### MongoDB Storage Options
+
+Similar to JSON storage, MongoDB supports two storage approaches:
+
+- **Individual Collection (default)**: Each email is stored as a separate document in the main collection
+- **Bulk Collection**: Emails are stored as documents in a separate bulk collection
+
+You can configure the bulk collection name (default: "emails_bulk") with:
+```
+MONGODB_BULK_COLLECTION=my_bulk_collection_name
+```
+
+To control this behavior:
+
+1. Using the API:
+   ```
+   # Save to individual collection (default)
+   POST /process/{filter_id}?use_chunks=true
+   
+   # Save to bulk collection
+   POST /process/{filter_id}?use_chunks=false
+   ```
+
+2. Using environment variables:
+   ```
+   # Configure the default storage mode (default is "true")
+   MAILSCOUT_USE_CHUNKS=false
+   ```
+
+3. Using the storage API directly:
+   ```python
+   # Save to individual collection (default)
+   storage.save_email(email_data, use_chunks=True)
+   
+   # Save to bulk collection
+   storage.save_email(email_data, use_chunks=False)
    ```
 
 ## Running the Application

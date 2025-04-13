@@ -17,6 +17,9 @@ os.makedirs(PROCESSED_EMAILS_DIR, exist_ok=True)
 # Default storage configuration
 DEFAULT_STORAGE_CONFIG = {"type": "json", "config": {}}
 
+# Default storage behavior
+USE_CHUNKS_DEFAULT = os.environ.get("MAILSCOUT_USE_CHUNKS", "true").lower() == "true"
+
 # MongoDB configuration (if used)
 MONGODB_CONFIG = {
     "connection_string": os.environ.get(
@@ -24,6 +27,7 @@ MONGODB_CONFIG = {
     ),
     "database_name": os.environ.get("MONGODB_DATABASE", "mailscout"),
     "collection_name": os.environ.get("MONGODB_COLLECTION", "emails"),
+    "bulk_collection_name": os.environ.get("MONGODB_BULK_COLLECTION", "emails_bulk"),
 }
 
 # Load storage configuration from environment variables or default to file-based

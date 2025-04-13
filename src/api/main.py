@@ -17,7 +17,7 @@ from src.services.gmail_service import GmailService
 from src.services.filter_service import FilterService
 from src.services.webhook_service import WebhookService
 from src.storage import EmailStorageInterface, EmailStorageFactory
-from src.config import get_storage_config
+from src.config import get_storage_config, USE_CHUNKS_DEFAULT
 from src.utils import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -128,12 +128,22 @@ async def process_filter(
     filter_id: str,
     background_tasks: BackgroundTasks,
     max_results: int = 100,
+    use_chunks: bool = USE_CHUNKS_DEFAULT,
     gmail_service: GmailService = Depends(get_gmail_service),
     filter_service: FilterService = Depends(get_filter_service),
     email_storage: EmailStorageInterface = Depends(get_email_storage),
     webhook_service: WebhookService = Depends(get_webhook_service),
 ) -> Dict[str, str]:
-    """Process a filter and fetch matching emails."""
+    """Process a filter and fetch matching emails.
+    
+    Args:
+        filter_id: ID of the filter to process
+        max_results: Maximum number of emails to process
+        use_chunks: Storage mode configuration:
+                  - When True (default), save emails as individual files/records
+                  - When False, save to a single bulk file/collection
+                  - This parameter can be set globally via the MAILSCOUT_USE_CHUNKS environment variable
+    """
     filter_obj = filter_service.get_filter(filter_id)
 
     if not filter_obj:
@@ -150,6 +160,7 @@ async def process_filter(
         gmail_service,
         email_storage,
         webhook_service,
+        use_chunks,
     )
 
     return {"status": "processing", "filter_id": filter_id}
@@ -160,7 +171,8 @@ async def process_filter_background(
     max_results: int,
     gmail_service: GmailService,
     email_storage: EmailStorageInterface,
-    webhook_service: WebhookService = Depends(get_webhook_service),
+    webhook_service: WebhookService,
+    use_chunks: bool = True,
 ) -> None:
     """Background task to process a filter."""
     try:
@@ -169,7 +181,7 @@ async def process_filter_background(
         # Save processed emails and send webhook notifications
         for email_data in emails:
             # Save email
-            email_storage.save_email(email_data)
+            email_storage.save_email(email_data, use_chunks=use_chunks)
 
             # Send webhook notifications if webhooks are configured
             if filter_obj.webhooks:
@@ -184,7 +196,8 @@ async def process_filter_background(
                         f"Error sending webhook notifications: {str(webhook_err)}"
                     )
 
-        logger.info(f"Processed filter {filter_obj.id}, saved {len(emails)} emails")
+        storage_mode = "individual files" if use_chunks else "bulk storage"
+        logger.info(f"Processed filter {filter_obj.id}, saved {len(emails)} emails using {storage_mode}")
     except Exception as e:
         logger.error(f"Error processing filter {filter_obj.id}: {str(e)}")
 

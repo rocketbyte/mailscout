@@ -33,6 +33,7 @@ class JsonEmailStorage(EmailStorageInterface):
         """
         self.storage_path = storage_path or PROCESSED_EMAILS_DIR
         self._ensure_storage_path()
+        self.bulk_file_path = os.path.join(self.storage_path, "emails_bulk.json")
 
     def _ensure_storage_path(self) -> None:
         """Ensure the storage directory exists."""
@@ -63,19 +64,46 @@ class JsonEmailStorage(EmailStorageInterface):
         else:
             return email_data.dict()
 
-    def save_email(self, email_data: EmailData) -> bool:
+    def save_email(self, email_data: EmailData, use_chunks: bool = True) -> bool:
         """Save email data to storage."""
         try:
             # Apply filter adapters
             email_data = self._apply_filter_adapters(email_data)
-
-            file_path = self._get_email_file_path(email_data.id)
             email_dict = self._to_dict(email_data)
 
-            with open(file_path, "w") as f:
-                json.dump(email_dict, f, indent=2, cls=DateTimeEncoder)
-
-            logger.info(f"Saved email {email_data.id} to {file_path}")
+            if use_chunks:
+                # Save as individual file
+                file_path = self._get_email_file_path(email_data.id)
+                with open(file_path, "w") as f:
+                    json.dump(email_dict, f, indent=2, cls=DateTimeEncoder)
+                logger.info(f"Saved email {email_data.id} to {file_path}")
+            else:
+                # Append to bulk file
+                existing_emails = []
+                if os.path.exists(self.bulk_file_path):
+                    try:
+                        with open(self.bulk_file_path, "r") as f:
+                            existing_emails = json.load(f)
+                    except json.JSONDecodeError:
+                        # Handle empty or invalid JSON file
+                        existing_emails = []
+                
+                # Check if email with same ID already exists in the bulk file
+                for i, email in enumerate(existing_emails):
+                    if email.get("id") == email_data.id:
+                        # Update existing entry
+                        existing_emails[i] = email_dict
+                        break
+                else:
+                    # Add new entry if not found
+                    existing_emails.append(email_dict)
+                
+                # Write back all emails
+                with open(self.bulk_file_path, "w") as f:
+                    json.dump(existing_emails, f, indent=2, cls=DateTimeEncoder)
+                
+                logger.info(f"Saved email {email_data.id} to bulk file {self.bulk_file_path}")
+            
             return True
         except Exception as e:
             logger.error(f"Failed to save email {email_data.id}: {str(e)}")
@@ -83,19 +111,29 @@ class JsonEmailStorage(EmailStorageInterface):
 
     def get_email(self, email_id: str) -> Optional[EmailData]:
         """Get email data by ID."""
+        # Check individual file first
         file_path = self._get_email_file_path(email_id)
-
-        if not os.path.exists(file_path):
-            return None
-
-        try:
-            with open(file_path, "r") as f:
-                email_data = json.load(f)
-
-            return EmailData.parse_obj(email_data)
-        except Exception as e:
-            logger.error(f"Failed to load email {email_id}: {str(e)}")
-            return None
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r") as f:
+                    email_data = json.load(f)
+                return EmailData.parse_obj(email_data)
+            except Exception as e:
+                logger.error(f"Failed to load email {email_id} from file: {str(e)}")
+        
+        # If not found, check bulk file
+        if os.path.exists(self.bulk_file_path):
+            try:
+                with open(self.bulk_file_path, "r") as f:
+                    emails = json.load(f)
+                
+                for email in emails:
+                    if email.get("id") == email_id:
+                        return EmailData.parse_obj(email)
+            except Exception as e:
+                logger.error(f"Failed to load email {email_id} from bulk file: {str(e)}")
+        
+        return None
 
     def get_emails_by_filter(self, filter_id: str, limit: int = 100) -> List[EmailData]:
         """Get emails processed by a specific filter."""
@@ -103,8 +141,9 @@ class JsonEmailStorage(EmailStorageInterface):
         count = 0
 
         try:
+            # Check individual files
             for filename in os.listdir(self.storage_path):
-                if not filename.endswith(".json"):
+                if not filename.endswith(".json") or filename == "emails_bulk.json":
                     continue
 
                 file_path = os.path.join(self.storage_path, filename)
@@ -118,6 +157,25 @@ class JsonEmailStorage(EmailStorageInterface):
 
                 if count >= limit:
                     break
+            
+            # Check bulk file if we haven't reached the limit yet
+            if count < limit and os.path.exists(self.bulk_file_path):
+                try:
+                    with open(self.bulk_file_path, "r") as f:
+                        bulk_emails = json.load(f)
+                    
+                    for email_data in bulk_emails:
+                        if email_data.get("filter_id") == filter_id:
+                            # Check if this email is already in the results
+                            email_id = email_data.get("id")
+                            if not any(e.id == email_id for e in emails):
+                                emails.append(EmailData.parse_obj(email_data))
+                                count += 1
+                                
+                                if count >= limit:
+                                    break
+                except Exception as e:
+                    logger.error(f"Failed to get emails from bulk file: {str(e)}")
 
             return emails
         except Exception as e:
@@ -126,27 +184,61 @@ class JsonEmailStorage(EmailStorageInterface):
 
     def delete_email(self, email_id: str) -> bool:
         """Delete an email by ID."""
+        success = False
+        
+        # Try to delete from individual file
         file_path = self._get_email_file_path(email_id)
-
-        if not os.path.exists(file_path):
-            return False
-
-        try:
-            os.remove(file_path)
-            logger.info(f"Deleted email {email_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to delete email {email_id}: {str(e)}")
-            return False
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+                success = True
+                logger.info(f"Deleted email {email_id} from individual file")
+            except Exception as e:
+                logger.error(f"Failed to delete email {email_id} from file: {str(e)}")
+        
+        # Try to delete from bulk file
+        if os.path.exists(self.bulk_file_path):
+            try:
+                with open(self.bulk_file_path, "r") as f:
+                    emails = json.load(f)
+                
+                original_count = len(emails)
+                emails = [email for email in emails if email.get("id") != email_id]
+                
+                if len(emails) < original_count:
+                    with open(self.bulk_file_path, "w") as f:
+                        json.dump(emails, f, indent=2, cls=DateTimeEncoder)
+                    success = True
+                    logger.info(f"Deleted email {email_id} from bulk file")
+            except Exception as e:
+                logger.error(f"Failed to delete email {email_id} from bulk file: {str(e)}")
+        
+        return success
 
     def search_emails(self, query: Dict[str, Any], limit: int = 100) -> List[EmailData]:
         """Search emails by criteria."""
         emails = []
         count = 0
+        
+        # Helper function to check if an email matches the query
+        def matches_query(email_data: Dict[str, Any]) -> bool:
+            for key, value in query.items():
+                if key == "extracted_data":
+                    # Special handling for extracted data
+                    for data_key, data_value in value.items():
+                        if (
+                            data_key not in email_data.get("extracted_data", {})
+                            or email_data["extracted_data"][data_key] != data_value
+                        ):
+                            return False
+                elif key not in email_data or email_data[key] != value:
+                    return False
+            return True
 
         try:
+            # Search in individual files
             for filename in os.listdir(self.storage_path):
-                if not filename.endswith(".json"):
+                if not filename.endswith(".json") or filename == "emails_bulk.json":
                     continue
 
                 file_path = os.path.join(self.storage_path, filename)
@@ -154,28 +246,31 @@ class JsonEmailStorage(EmailStorageInterface):
                 with open(file_path, "r") as f:
                     email_data = json.load(f)
 
-                # Check if email matches query criteria
-                match = True
-                for key, value in query.items():
-                    if key == "extracted_data":
-                        # Special handling for extracted data
-                        for data_key, data_value in value.items():
-                            if (
-                                data_key not in email_data.get("extracted_data", {})
-                                or email_data["extracted_data"][data_key] != data_value
-                            ):
-                                match = False
-                                break
-                    elif key not in email_data or email_data[key] != value:
-                        match = False
-                        break
-
-                if match:
+                if matches_query(email_data):
                     emails.append(EmailData.parse_obj(email_data))
                     count += 1
 
                 if count >= limit:
                     break
+            
+            # Search in bulk file if limit not reached
+            if count < limit and os.path.exists(self.bulk_file_path):
+                try:
+                    with open(self.bulk_file_path, "r") as f:
+                        bulk_emails = json.load(f)
+                    
+                    for email_data in bulk_emails:
+                        if matches_query(email_data):
+                            # Check if this email is already in results
+                            email_id = email_data.get("id")
+                            if not any(e.id == email_id for e in emails):
+                                emails.append(EmailData.parse_obj(email_data))
+                                count += 1
+                                
+                                if count >= limit:
+                                    break
+                except Exception as e:
+                    logger.error(f"Failed to search emails in bulk file: {str(e)}")
 
             return emails
         except Exception as e:

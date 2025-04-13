@@ -10,11 +10,13 @@ class EmailStorageInterface(abc.ABC):
     """Abstract base class for email storage implementations."""
 
     @abc.abstractmethod
-    def save_email(self, email_data: EmailData) -> bool:
+    def save_email(self, email_data: EmailData, use_chunks: bool = True) -> bool:
         """Save email data to storage.
 
         Args:
             email_data: The email data to save
+            use_chunks: When True, save as individual files/records.
+                       When False, append to a single file/collection.
 
         Returns:
             bool: True if the operation was successful, False otherwise
