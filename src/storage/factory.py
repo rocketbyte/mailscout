@@ -1,6 +1,6 @@
 """Factory for creating storage implementations."""
 
-from typing import Dict, Any, Type
+from typing import Dict, Any, Type, Set, Callable, Optional
 
 from src.storage.interface import EmailStorageInterface
 
@@ -9,18 +9,27 @@ class EmailStorageFactory:
     """Factory class to create storage implementations."""
 
     _implementations: Dict[str, Type[EmailStorageInterface]] = {}
+    _validators: Dict[str, Callable[[Dict[str, Any]], None]] = {}
 
     @classmethod
     def register(
-        cls, storage_type: str, implementation: Type[EmailStorageInterface]
+        cls, 
+        storage_type: str, 
+        implementation: Type[EmailStorageInterface],
+        validator: Optional[Callable[[Dict[str, Any]], None]] = None
     ) -> None:
         """Register a storage implementation.
 
         Args:
             storage_type: The identifier for this storage type
             implementation: The implementation class
+            validator: Optional function to validate constructor args
         """
-        cls._implementations[storage_type.lower()] = implementation
+        storage_type = storage_type.lower()
+        cls._implementations[storage_type] = implementation
+        
+        if validator is not None:
+            cls._validators[storage_type] = validator
 
     @classmethod
     def create_storage(cls, storage_type: str, **kwargs: Any) -> EmailStorageInterface:
@@ -42,15 +51,8 @@ class EmailStorageFactory:
             raise ValueError(f"Unsupported storage type: {storage_type}")
 
         implementation = cls._implementations[storage_type]
-
-        # Handle specific implementation requirements
-        if storage_type == "mongodb":
-            required_keys = ["connection_string", "database_name"]
-            missing_keys = [key for key in required_keys if key not in kwargs]
-
-            if missing_keys:
-                raise ValueError(
-                    f"Missing required arguments for MongoDB storage: {', '.join(missing_keys)}"
-                )
-
+        
+        if storage_type in cls._validators:
+            cls._validators[storage_type](kwargs)
+            
         return implementation(**kwargs)

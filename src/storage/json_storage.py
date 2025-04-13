@@ -186,4 +186,8 @@ class JsonEmailStorage(EmailStorageInterface):
 # Register this implementation with the factory
 from src.storage.factory import EmailStorageFactory
 
-EmailStorageFactory.register("json", JsonEmailStorage)
+def json_validator(config: Dict[str, Any]) -> None:
+    if "storage_path" in config and not isinstance(config["storage_path"], str):
+        raise ValueError("storage_path must be a string")
+
+EmailStorageFactory.register("json", JsonEmailStorage, json_validator)

@@ -10,6 +10,7 @@ from src.storage.interface import EmailStorageInterface
 
 logger = logging.getLogger(__name__)
 
+STORAGE_TYPE = 'mongodb'
 
 class MongoDBEmailStorage(EmailStorageInterface):
     """Implementation of email storage using MongoDB."""
@@ -193,4 +194,13 @@ class MongoDBEmailStorage(EmailStorageInterface):
 # Register this implementation with the factory
 from src.storage.factory import EmailStorageFactory
 
-EmailStorageFactory.register("mongodb", MongoDBEmailStorage)
+def mongodb_validator(config: Dict[str, Any]) -> None:
+    required_keys = ["connection_string", "database_name"]
+    missing_keys = [key for key in required_keys if key not in config]
+    
+    if missing_keys:
+        raise ValueError(
+            f"Missing required arguments for MongoDB storage: {', '.join(missing_keys)}"
+        )
+
+EmailStorageFactory.register(STORAGE_TYPE, MongoDBEmailStorage, mongodb_validator)
