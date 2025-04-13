@@ -32,14 +32,33 @@ class MongoDBEmailStorage(EmailStorageInterface):
             ImportError: If pymongo is not installed
             ConnectionError: If connection to MongoDB fails
         """
+        # Set instance variables first (without connecting)
+        self.connection_string = connection_string
+        self.database_name = database_name
+        self.collection_name = collection_name
+        self.client = None
+        self.db = None
+        self.collection = None
+        
+        # Lazy initialization - we'll connect only when needed
+        self._initialized = False
+        
+    def _ensure_connected(self):
+        """Ensure connection to MongoDB is established.
+        
+        This is called before any operation that requires database access.
+        """
+        if self._initialized:
+            return
+            
         try:
             # Import here to make MongoDB optional
             import pymongo
             from pymongo import MongoClient
 
-            self.client: MongoClient = MongoClient(connection_string)
-            self.db: Any = self.client[database_name]
-            self.collection: Any = self.db[collection_name]
+            self.client = MongoClient(self.connection_string)
+            self.db = self.client[self.database_name]
+            self.collection = self.db[self.collection_name]
 
             # Create indexes for common queries
             self.collection.create_index("id", unique=True)
@@ -47,8 +66,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
             self.collection.create_index("message_id")
 
             logger.info(
-                f"Connected to MongoDB database: {database_name}, collection: {collection_name}"
+                f"Connected to MongoDB database: {self.database_name}, collection: {self.collection_name}"
             )
+            self._initialized = True
         except ImportError:
             logger.error(
                 "pymongo not installed. Please install with 'pip install pymongo'"
@@ -91,6 +111,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
     def save_email(self, email_data: EmailData) -> bool:
         """Save email data to MongoDB."""
         try:
+            # Ensure we are connected
+            self._ensure_connected()
+            
             # Apply filter adapters
             email_data = self._apply_filter_adapters(email_data)
 
@@ -110,6 +133,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
     def get_email(self, email_id: str) -> Optional[EmailData]:
         """Get email data by ID from MongoDB."""
         try:
+            # Ensure we are connected
+            self._ensure_connected()
+            
             email_data = self.collection.find_one({"id": email_id})
 
             if not email_data:
@@ -129,6 +155,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
         emails = []
 
         try:
+            # Ensure we are connected
+            self._ensure_connected()
+            
             cursor = self.collection.find({"filter_id": filter_id}).limit(limit)
 
             for email_data in cursor:
@@ -148,6 +177,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
     def delete_email(self, email_id: str) -> bool:
         """Delete an email by ID from MongoDB."""
         try:
+            # Ensure we are connected
+            self._ensure_connected()
+            
             result = self.collection.delete_one({"id": email_id})
 
             if result.deleted_count > 0:
@@ -165,6 +197,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
         emails = []
 
         try:
+            # Ensure we are connected
+            self._ensure_connected()
+            
             # Convert the query to MongoDB format
             mongo_query = {}
 
