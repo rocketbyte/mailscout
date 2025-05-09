@@ -36,3 +36,11 @@ class EmailData(BaseModel):
 
     class Config:
         json_encoders = {datetime: lambda v: v.isoformat()}
+        
+    # Support for both Pydantic v1 and v2
+    @classmethod
+    def parse_obj(cls, obj: Dict[str, Any]) -> 'EmailData':
+        if hasattr(cls, "model_validate"):
+            return cls.model_validate(obj)
+        else:
+            return cls(**obj)

@@ -59,10 +59,12 @@ class JsonEmailStorage(EmailStorageInterface):
     def _to_dict(self, email_data: EmailData) -> Dict[str, Any]:
         """Convert EmailData to dictionary."""
         # Handle both Pydantic v1 and v2
+        result: Dict[str, Any]
         if hasattr(email_data, "model_dump"):
-            return email_data.model_dump()
+            result = email_data.model_dump()
         else:
-            return email_data.dict()
+            result = email_data.dict()
+        return result
 
     def save_email(self, email_data: EmailData, use_chunks: bool = True) -> bool:
         """Save email data to storage."""
@@ -117,7 +119,8 @@ class JsonEmailStorage(EmailStorageInterface):
             try:
                 with open(file_path, "r") as f:
                     email_data = json.load(f)
-                return EmailData.parse_obj(email_data)
+                parsed_email: Optional[EmailData] = EmailData.parse_obj(email_data)
+                return parsed_email
             except Exception as e:
                 logger.error(f"Failed to load email {email_id} from file: {str(e)}")
         
@@ -129,7 +132,8 @@ class JsonEmailStorage(EmailStorageInterface):
                 
                 for email in emails:
                     if email.get("id") == email_id:
-                        return EmailData.parse_obj(email)
+                        bulk_parsed_email: Optional[EmailData] = EmailData.parse_obj(email)
+                        return bulk_parsed_email
             except Exception as e:
                 logger.error(f"Failed to load email {email_id} from bulk file: {str(e)}")
         

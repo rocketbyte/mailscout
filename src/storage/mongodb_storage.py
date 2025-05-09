@@ -131,11 +131,14 @@ class MongoDBEmailStorage(EmailStorageInterface):
             email_dict = email_data.dict()
 
         # Convert datetime objects to strings
+        result_dict: Dict[str, Any] = {}
         for key, value in email_dict.items():
             if isinstance(value, datetime):
-                email_dict[key] = value.isoformat()
+                result_dict[key] = value.isoformat()
+            else:
+                result_dict[key] = value
 
-        return email_dict
+        return result_dict
 
     def save_email(self, email_data: EmailData, use_chunks: bool = True) -> bool:
         """Save email data to MongoDB."""
@@ -187,7 +190,9 @@ class MongoDBEmailStorage(EmailStorageInterface):
             if "_id" in email_data:
                 del email_data["_id"]
 
-            return EmailData.parse_obj(email_data)
+            # Explicitly return the typed result
+            parsed_email: Optional[EmailData] = EmailData.parse_obj(email_data)
+            return parsed_email
         except Exception as e:
             logger.error(f"Failed to load email {email_id} from MongoDB: {str(e)}")
             return None
