@@ -86,7 +86,7 @@ class WebhookService:
         payload = {
             "event": event_type,
             "timestamp": int(time.time()),
-            "data": data.model_dump() if hasattr(data, "model_dump") else data,
+            "data": data.model_dump() if hasattr(data, "model_dump") else data.dict() if hasattr(data, "dict") else data,
         }
 
         payload_json = json.dumps(payload, cls=DateTimeEncoder)

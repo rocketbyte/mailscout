@@ -33,7 +33,7 @@ class GenericTransactionAdapter:
         Args:
             owner_identifiers: List of strings that identify the owner in transaction fields
         """
-        self.owner_identifiers = [id.upper() for id in (owner_identifiers or [])]
+        self.owner_identifiers = [str(id).upper() for id in (owner_identifiers or [])]
 
     def process(
         self, email: EmailData, extracted_data: Dict[str, Any]

@@ -26,6 +26,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pytest pytest-cov
+        pip install types-beautifulsoup4 types-requests
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
     # - name: Check code formatting with Black
@@ -33,15 +34,15 @@ jobs:
     #     pip install black
     #     black --check src tests
     
-    # - name: Run tests with pytest
-    #   run: |
-    #     cd $(git rev-parse --show-toplevel)
-    #     PYTHONPATH=$PWD pytest --cov=src
+    - name: Run tests with pytest
+      run: |
+        cd $(git rev-parse --show-toplevel)
+        PYTHONPATH=$PWD pytest --cov=src
     
     - name: Run type checking with mypy
       run: |
-        pip install mypy types-beautifulsoup4
-        mypy --ignore-missing-imports src
+        pip install mypy
+        mypy --ignore-missing-imports --no-error-summary src
 
   # build:
   #   runs-on: ubuntu-latest

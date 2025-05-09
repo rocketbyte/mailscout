@@ -6,12 +6,15 @@ import shutil
 from datetime import datetime
 
 from src.models.email_data import EmailData, EmailContent
-from src.storage import (
-    EmailStorageInterface,
-    JsonEmailStorage,
-    MongoDBEmailStorage,
-    EmailStorageFactory,
-)
+from src.storage.interface import EmailStorageInterface
+from src.storage.json_storage import JsonEmailStorage
+from src.storage.factory import EmailStorageFactory
+
+# Import MongoDBEmailStorage conditionally
+try:
+    from src.storage.mongodb_storage import MongoDBEmailStorage
+except ImportError:
+    pass
 
 
 @pytest.fixture

@@ -144,6 +144,9 @@ class DataExtractionRule(BaseModel):
 
         # Search in each content type
         for content in search_texts:
+            if not content:
+                continue
+                
             match = self._compiled_pattern.search(content)
             if match:
                 if self.group_name and self.group_name in match.groupdict():

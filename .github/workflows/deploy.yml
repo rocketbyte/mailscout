@@ -1,77 +1,71 @@
-# name: Deploy to Test Server
+name: Deploy to Test Server
 
-# on:
-#   workflow_run:
-#     workflows: ["MailScout CI"]
-#     branches: [main]
-#     types:
-#       - completed
+on:
+  workflow_run:
+    workflows: ["MailScout CI"]
+    branches: [main]
+    types:
+      - completed
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
-#     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
-#     steps:
-#     - uses: actions/checkout@v3
+    steps:
+    - uses: actions/checkout@v3
     
-#     - name: Download build artifacts
-#       uses: actions/download-artifact@v3
-#       with:
-#         name: dist
-#         path: dist/
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
     
-#     - name: Set up SSH
-#       uses: webfactory/ssh-agent@v0.7.0
-#       with:
-#         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: Add host key to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
     
-#     - name: Add host key to known_hosts
-#       run: |
-#         mkdir -p ~/.ssh
-#         ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
-    
-#     - name: Deploy to test server
-#       env:
-#         DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-#         DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-#         DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-#       run: |
-#         # Create deployment package
-#         tar -czf mailscout.tar.gz src/ requirements.txt run.py
+    - name: Deploy to test server
+      env:
+        DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      run: |
+        # Create deployment package
+        tar -czf mailscout.tar.gz src/ requirements.txt run.py
         
-#         # Copy to server
-#         scp mailscout.tar.gz $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
+        # Copy to server
+        scp mailscout.tar.gz $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/
         
-#         # Execute deployment script on server
-#         ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
-#           cd $DEPLOY_PATH
-#           # Extract files
-#           tar -xzf mailscout.tar.gz
+        # Execute deployment script on server
+        ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+          cd $DEPLOY_PATH
+          # Extract files
+          tar -xzf mailscout.tar.gz
           
-#           # Set up virtual environment if not exists
-#           if [ ! -d "venv" ]; then
-#             python3 -m venv venv
-#           fi
+          # Set up virtual environment if not exists
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
           
-#           # Activate virtual environment and install dependencies
-#           source venv/bin/activate
-#           pip install -r requirements.txt
+          # Activate virtual environment and install dependencies
+          source venv/bin/activate
+          pip install -r requirements.txt
           
-#           # Restart service
-#           sudo systemctl restart mailscout
+          # Restart service
+          sudo systemctl restart mailscout
           
-#           # Clean up
-#           rm mailscout.tar.gz
-#         EOF
+          # Clean up
+          rm mailscout.tar.gz
+        EOF
         
-#     - name: Verify deployment
-#       env:
-#         DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-#         API_PORT: ${{ secrets.API_PORT }}
-#       run: |
-#         # Wait a bit for the service to start
-#         sleep 5
+    - name: Verify deployment
+      env:
+        DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        API_PORT: ${{ secrets.API_PORT }}
+      run: |
+        # Wait a bit for the service to start
+        sleep 5
         
-#         # Check if API is running
-#         curl --fail http://$DEPLOY_HOST:$API_PORT/ || echo "API health check failed"
+        # Check if API is running
+        curl --fail http://$DEPLOY_HOST:$API_PORT/ || echo "API health check failed"
