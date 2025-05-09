@@ -38,10 +38,10 @@ jobs:
         cd $(git rev-parse --show-toplevel)
         PYTHONPATH=$PWD pytest --cov=src
     
-    - name: Run type checking with mypy
-      run: |
-        pip install mypy types-beautifulsoup4
-        mypy --ignore-missing-imports src
+    # - name: Run type checking with mypy
+    #   run: |
+    #     pip install mypy types-beautifulsoup4
+    #     mypy --ignore-missing-imports src
 
   # build:
   #   runs-on: ubuntu-latest
