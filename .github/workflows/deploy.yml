@@ -3,7 +3,7 @@ name: Deploy to Test Server
 on:
   workflow_run:
     workflows: ["MailScout CI"]
-    branches: [main]
+    branches: [none]
     types:
       - completed
 
